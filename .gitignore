@@ -1,0 +1,16 @@
+# Secrets — NEVER commit. Contains NULLBORE_API_KEY.
+.env
+.env.local
+.env.*.local
+ssh-keys/
+
+# Compiled binaries
+/client/nullbore
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
