@@ -1,0 +1,12 @@
+# NullBore relay client config for the abookify server container.
+#
+# api_key, server, and tunnels are supplied via environment
+# (NULLBORE_API_KEY / NULLBORE_SERVER / NULLBORE_TUNNELS — the latter
+# set by relay/start.sh to "server:7654:<server_id>"). The only thing
+# pinned here is the tunnel TTL.
+#
+# Bumped from the client's 1h default to weekly so the public tunnel
+# stops expiring + reconnecting every hour (each cycle dropped the
+# connection for ~1s; mobile saw intermittent failures). The relay
+# client reconnects on its own; start.sh re-runs on reboot.
+default_ttl = "168h"
