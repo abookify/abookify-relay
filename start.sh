@@ -15,25 +15,49 @@ if [ -z "${NULLBORE_API_KEY:-}" ]; then
   exit 1
 fi
 
-# Wait for the server and read its install UUID
+# Wait for the server to be reachable at all (liveness, never auth-gated)
 for i in $(seq 1 30); do
-  if info=$(curl -fsS http://localhost:7654/api/server-info 2>/dev/null); then
-    break
-  fi
+  curl -fsS http://localhost:7654/api/health >/dev/null 2>&1 && break
   sleep 1
 done
-if [ -z "${info:-}" ]; then
+if ! curl -fsS http://localhost:7654/api/health >/dev/null 2>&1; then
   echo "error: abookify server not responding on :7654 — start it first" >&2
   exit 1
 fi
 
-SERVER_ID=$(echo "$info" | sed -n 's/.*"server_id":"\([^"]*\)".*/\1/p')
+# Read the install UUID. /api/server-info is auth-gated when #197 auth is on
+# (it 401s), so fall back to reading settings.server_install_id straight out of
+# the SQLite file — that's the same value the endpoint returns. Without this
+# fallback an auth-enabled server silently loses its tunnel across a reboot.
+SERVER_ID=""
+if info=$(curl -fsS http://localhost:7654/api/server-info 2>/dev/null); then
+  SERVER_ID=$(echo "$info" | sed -n 's/.*"server_id":"\([^"]*\)".*/\1/p')
+fi
+if [ -z "$SERVER_ID" ] && [ -f data/abookify.db ]; then
+  SERVER_ID=$(python3 -c "
+import sqlite3,sys
+c=sqlite3.connect('file:data/abookify.db?mode=ro',uri=True)
+r=c.execute(\"select value from settings where key='server_install_id'\").fetchone()
+sys.stdout.write(r[0] if r else '')
+" 2>/dev/null || true)
+  [ -n "$SERVER_ID" ] && echo "relay: server_info unavailable (auth on?) — read server_id from data/abookify.db"
+fi
 if [ -z "$SERVER_ID" ]; then
-  echo "error: could not read server_id from /api/server-info" >&2
+  echo "error: could not determine server_id (API 401/unreachable and DB read failed)" >&2
   exit 1
 fi
 
 echo "relay: tunneling https://${SERVER_ID}.${NULLBORE_BASE_DOMAIN:-abookify.nullbore.com} → local :7654"
 
 export NULLBORE_TUNNELS="server:7654:${SERVER_ID}"
-exec docker compose --profile relay up -d --build nullbore
+
+# Include the GPU overlay when this host has an NVIDIA GPU. Without it, compose
+# reconciles the whole project against the base file only and RECREATES whisper
+# without its GPU config — silently dropping STT back to CPU (happened after the
+# 2026-07-28 reboot). The overlay must match however the stack was brought up.
+COMPOSE_FILES=(-f docker-compose.yml)
+if nvidia-smi -L >/dev/null 2>&1; then
+  COMPOSE_FILES+=(-f docker-compose.gpu.yml)
+fi
+
+exec docker compose "${COMPOSE_FILES[@]}" --profile relay up -d --build nullbore
