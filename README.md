@@ -15,6 +15,13 @@ Abookify is tunnel-agnostic. The mobile app accepts any reachable URL — you ch
 | **Port forward + DDNS** | Has a static-ish IP and is fine with router config | Documentation only — Abookify doesn't care |
 | **Self-hosted NullBore** | Wants the NullBore UX without the NullBore service | NullBore is open source — run your own from [github.com/nullbore](https://github.com/nullbore) |
 
+> **Privacy note (verified 2026-10-04):** a hosted relay is **not end-to-end**. With NullBore
+> your HTTPS session ends at the relay's edge (fronted by Cloudflare) and the relay forwards
+> plain HTTP to your server inside its own tunnel — so Cloudflare and NullBore can technically
+> read your traffic in transit. Tailscale/WireGuard keep it end to end; the LAN never uses a
+> relay (and is plain HTTP). "Never inspects" is a provider's policy, not a property anyone
+> here can verify. Full evidence: abookify.com/privacy.
+
 Nothing in Abookify pins you to any specific tunnel. The `Connect` screen in the mobile app just takes a URL.
 
 ## The NullBore path (what this repo automates)
