@@ -1,0 +1,4 @@
+# Certificates WE obtained for our end-to-end names (sha256 of the DER leaf, lowercase hex).
+# bin/ct-monitor.sh alerts on any certificate in CT logs for our names that is not listed here.
+# 2026-10-06 production LE cert for PJ's server (<id>-e2e.abookify.e2e.nullbore.com), serial 053DE789F47DBC135001E91ACC96AAD31132
+61d85df417bf8f10d517e8a677628ef3dbc8a304c78dad81930723e9ec4515fe
