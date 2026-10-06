@@ -47,9 +47,19 @@ if [ -z "$SERVER_ID" ]; then
   exit 1
 fi
 
-echo "relay: tunneling https://${SERVER_ID}.${NULLBORE_BASE_DOMAIN:-abookify.nullbore.com} → local :7654"
-
-export NULLBORE_TUNNELS="server:7654:${SERVER_ID}"
+# End-to-end mode (NULLBORE_E2E_DOMAIN set, e.g. abookify.e2e.nullbore.com): the
+# relay forwards the phone's TLS bytes untouched into the server's TLS listener
+# (:7655, self-signed, pinned by the pairing QR). The relay never holds a key
+# for that hostname. Requires a paid NullBore plan (403 otherwise) and the
+# v0.1.0-beta.23+ client vendored in ./client. Without it: the classic proxied
+# path, which the relay (and Cloudflare in front of it) can read.
+if [ -n "${NULLBORE_E2E_DOMAIN:-}" ]; then
+  echo "relay: END-TO-END — https://${SERVER_ID}.${NULLBORE_E2E_DOMAIN} → local :${ABOOKIFY_TLS_PORT:-7655} (TLS passthrough; relay cannot read it)"
+  export NULLBORE_TUNNELS="server:${ABOOKIFY_TLS_PORT:-7655}:${SERVER_ID}+tls-passthrough"
+else
+  echo "relay: tunneling https://${SERVER_ID}.${NULLBORE_BASE_DOMAIN:-abookify.nullbore.com} → local :7654 (proxied; the relay terminates TLS)"
+  export NULLBORE_TUNNELS="server:7654:${SERVER_ID}"
+fi
 
 # Include the GPU overlay when this host has an NVIDIA GPU. Without it, compose
 # reconciles the whole project against the base file only and RECREATES whisper
