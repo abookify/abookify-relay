@@ -116,3 +116,43 @@ including from people we trust.
   its terms. It asks for a mode whose privacy property we can measure.
 
 *Contact: hi@abookify.com. Evidence and commands available on request.*
+
+---
+
+## Addendum, 2026-10-06 — passthrough verified by us; one more requirement for iOS
+
+**Verified on our own path today** (`<slug>-e2e.abookify.e2e.nullbore.com`, mode
+`tls-passthrough`, tier pro): the hostname resolves directly to `209.38.3.94`; the
+certificate a client receives is our server's own self-signed one; the presented
+SPKI SHA-256 equals the one our server reports locally; a key-pinned request
+(`curl --pinnedpubkey`) returns our server's response; no `server:`/`cf-*`
+headers. Section 3 passes as written. Thank you — this was shipped faster than we
+had any right to expect, and the Cloudflare point was handled exactly.
+
+**What we learned on the client side.** Our Android stack can pin a self-signed
+key (every network path is OkHttp). **iOS cannot:** AVPlayer, which plays the
+audio, offers no server-trust override for HTTPS, and neither do the WebSocket
+and image stacks we use. A self-signed leaf therefore fails chain validation
+before any pin applies, and the only in-app workaround is a loopback TLS proxy
+(weeks of work, and fragile). So for the end-to-end path to be usable on iPhone,
+the certificate the server presents must be **publicly trusted** — while the
+private key still lives only on the tunnel owner's machine.
+
+**The requirement (previously §2 item 4, optional; now required):** a way for the
+tunnel owner to obtain a publicly trusted certificate for
+`<slug>.<account>.e2e.nullbore.com` without the key leaving their machine. The
+natural shape is **ACME DNS-01 delegation**: an authenticated API call by the
+tunnel owner that sets (and later clears) the TXT record
+`_acme-challenge.<slug>.<account>.e2e.nullbore.com`, so the owner's own ACME
+client (we would embed one in our server) completes a Let's Encrypt order
+locally. The relay never sees a key. Section 3 is unchanged: the handshake must
+present the owner's key; our app keeps pinning the SPKI as the proof.
+
+Alternatives we can live with: an `_acme-challenge` CNAME delegation to a zone
+the owner controls (standard "DNS alias" mode), or passthrough routing for a
+hostname we control under our own domain (then we run the DNS-01 side). What
+does not work: the relay obtaining the certificate — that puts the key on the
+relay and defeats the mode.
+
+Until one of these exists, our apps keep using the proxied path by default, and
+our privacy page says so.
