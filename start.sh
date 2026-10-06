@@ -54,8 +54,12 @@ fi
 # v0.1.0-beta.23+ client vendored in ./client. Without it: the classic proxied
 # path, which the relay (and Cloudflare in front of it) can read.
 if [ -n "${NULLBORE_E2E_DOMAIN:-}" ]; then
-  echo "relay: END-TO-END — https://${SERVER_ID}.${NULLBORE_E2E_DOMAIN} → local :${ABOOKIFY_TLS_PORT:-7655} (TLS passthrough; relay cannot read it)"
-  export NULLBORE_TUNNELS="server:${ABOOKIFY_TLS_PORT:-7655}:${SERVER_ID}+tls-passthrough"
+  # Both paths side by side during migration: devices paired before the
+  # end-to-end URL existed keep working on the proxied hostname. The relay
+  # refuses two tunnels of one name, so the end-to-end one is "<id>-e2e"
+  # (the server advertises the same: PublicURL → https://<id>-e2e.<domain>).
+  echo "relay: END-TO-END — https://${SERVER_ID}-e2e.${NULLBORE_E2E_DOMAIN} → local :${ABOOKIFY_TLS_PORT:-7655} (TLS passthrough; relay cannot read it)"
+  export NULLBORE_TUNNELS="server:7654:${SERVER_ID},server:${ABOOKIFY_TLS_PORT:-7655}:${SERVER_ID}-e2e+tls-passthrough"
 else
   echo "relay: tunneling https://${SERVER_ID}.${NULLBORE_BASE_DOMAIN:-abookify.nullbore.com} → local :7654 (proxied; the relay terminates TLS)"
   export NULLBORE_TUNNELS="server:7654:${SERVER_ID}"
@@ -70,4 +74,4 @@ if nvidia-smi -L >/dev/null 2>&1; then
   COMPOSE_FILES+=(-f docker-compose.gpu.yml)
 fi
 
-exec docker compose "${COMPOSE_FILES[@]}" --profile relay up -d --build nullbore
+exec docker compose "${COMPOSE_FILES[@]}" --profile relay up -d --no-deps --build nullbore
