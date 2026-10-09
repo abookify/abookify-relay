@@ -1,3 +1,17 @@
+> **DECIDED 2026-10-09 — simpler than this document, and this document is now history.**
+> PJ: "both companies are owned by PJ3 Labs Inc. so let's keep it simple even if a bit hacky for their
+> special case." NullBore agreed the same day: **no sub-accounts, no Public Suffix List entry, no scoped
+> keys** — Abookify is a free special case on the existing account. **The account key lives on OUR BACKEND
+> ONLY**; the backend calls `/v1/acme/dns-01` for each user's `<slug>.abookify.e2e.nullbore.com`; the user's
+> server generates its own key + CSR and never holds the account key. Rate limit: 50 new certs/week stays
+> the ceiling; NullBore files the Let's Encrypt adjustment once PJ sends real install numbers; renewals do
+> not count. Board: #3 closed, **#16 rewritten to this plan and DEFERRED until a second user needs the
+> end-to-end path** (PJ's server is the only one on it), #15 lowered. **Do not start #16.** The residual
+> goes on the privacy page honestly when it ships: our backend can publish a challenge for any user's
+> name, so it could obtain a certificate for any user; CT detects that if each user's server reports its
+> own key. The analysis below (why not a shared key in users' hands, the rate-limit arithmetic, the CT
+> monitor shape, iOS vs Android wording) still holds; the sub-account/scoped-key machinery does not.
+
 # End-to-end certificates: who holds which key — a recommendation for PJ
 
 *server-web, 2026-10-06. One answer, with the reasoning; the facts are read from NullBore's
